@@ -5,6 +5,7 @@ resolver = "3"
 [workspace.dependencies]
 bevy = { version = "0.18", features = ["serialize"] }
 saddle-camera-split-screen = { path = ".." }
+split_screen = { path = ".." }
 
 [workspace.lints.clippy]
 too_many_arguments = "allow"
