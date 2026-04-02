@@ -1,0 +1,13 @@
+[package]
+name = "split_screen_example_four_player"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+bevy = { workspace = true }
+split_screen = { workspace = true }
+split_screen_example_common = { path = "../common" }
+
+[lints]
+workspace = true
