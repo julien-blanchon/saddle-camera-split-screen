@@ -1,7 +1,7 @@
 use bevy::window::{PrimaryWindow, WindowResized};
 use bevy::{ecs::schedule::ScheduleLabel, prelude::*};
 
-use split_screen::{
+use saddle_camera_split_screen::{
     LocalPlayerSlot, SplitScreenConfig, SplitScreenLayoutMode, SplitScreenPlugin,
     SplitScreenRuntime, SplitScreenTarget, SplitScreenUiRoot, SplitScreenView,
 };
@@ -24,7 +24,7 @@ fn integration_app(config: SplitScreenConfig) -> App {
     app.add_message::<WindowResized>();
     app.insert_resource(config);
     app.add_plugins(SplitScreenPlugin::new(Activate, Deactivate, Tick));
-    app.configure_sets(Tick, split_screen::SplitScreenSystems::Debug);
+    app.configure_sets(Tick, saddle_camera_split_screen::SplitScreenSystems::Debug);
 
     let mut window = Window::default();
     window.resolution.set_physical_resolution(1280, 720);
@@ -52,7 +52,7 @@ fn spawn_slot_camera(app: &mut App, slot: u8, order: isize, area_weight: f32) ->
             LocalPlayerSlot(slot),
             Camera2d,
             Camera { order, ..default() },
-            split_screen::SplitScreenCamera::default(),
+            saddle_camera_split_screen::SplitScreenCamera::default(),
             SplitScreenView { area_weight },
             Transform::from_xyz(0.0, 0.0, 999.0),
             GlobalTransform::from_xyz(0.0, 0.0, 999.0),
@@ -73,7 +73,7 @@ fn spawn_ui_root(app: &mut App, slot: u8) -> Entity {
 #[test]
 fn plugin_builds_with_custom_schedules_and_applies_a_layout_on_the_first_tick() {
     let mut app = integration_app(SplitScreenConfig {
-        mode: split_screen::SplitScreenMode::FixedOnly,
+        mode: saddle_camera_split_screen::SplitScreenMode::FixedOnly,
         ..default()
     });
     spawn_slot_target(&mut app, 0, Vec3::new(-220.0, 0.0, 0.0));
@@ -106,7 +106,7 @@ fn plugin_builds_with_custom_schedules_and_applies_a_layout_on_the_first_tick() 
 #[test]
 fn join_and_leave_recompute_the_snapshot_and_ui_targeting() {
     let mut app = integration_app(SplitScreenConfig {
-        two_player: split_screen::SplitScreenTwoPlayerConfig {
+        two_player: saddle_camera_split_screen::SplitScreenTwoPlayerConfig {
             merge_inner_distance: 40.0,
             merge_outer_distance: 80.0,
             ..default()
@@ -150,7 +150,7 @@ fn join_and_leave_recompute_the_snapshot_and_ui_targeting() {
 #[test]
 fn deactivate_restores_managed_cameras_and_clears_runtime_state() {
     let mut app = integration_app(SplitScreenConfig {
-        mode: split_screen::SplitScreenMode::FixedOnly,
+        mode: saddle_camera_split_screen::SplitScreenMode::FixedOnly,
         ..default()
     });
     spawn_slot_target(&mut app, 0, Vec3::new(-220.0, 0.0, 0.0));
@@ -193,7 +193,7 @@ fn deactivate_restores_managed_cameras_and_clears_runtime_state() {
 fn resize_message_recomputes_the_layout_integration_path() {
     let mut app = integration_app(SplitScreenConfig {
         resize_debounce_frames: 0,
-        mode: split_screen::SplitScreenMode::FixedOnly,
+        mode: saddle_camera_split_screen::SplitScreenMode::FixedOnly,
         ..default()
     });
     let window_entity = {

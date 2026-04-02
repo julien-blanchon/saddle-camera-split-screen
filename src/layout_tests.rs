@@ -248,7 +248,6 @@ fn three_player_balanced_fixed_strategy_keeps_slot_order_stable_across_position_
         three_player: crate::SplitScreenThreePlayerConfig {
             layout: SplitScreenThreePlayerLayout::WideTop,
             strategy: crate::SplitScreenMultiPlayerStrategy::BalancedFixed,
-            ..default()
         },
         ..default()
     };
@@ -285,7 +284,6 @@ fn four_player_balanced_fixed_strategy_ignores_position_for_fixed_ordering() {
         four_player: crate::SplitScreenFourPlayerConfig {
             layout: SplitScreenFourPlayerLayout::Grid,
             strategy: crate::SplitScreenMultiPlayerStrategy::BalancedFixed,
-            ..default()
         },
         ..default()
     };
