@@ -2,11 +2,9 @@ use split_screen_example_common as common;
 #[cfg(feature = "e2e")]
 mod e2e;
 
-use bevy::{
-    input::ButtonInput,
-    prelude::*,
-    remote::{RemotePlugin, http::RemoteHttpPlugin},
-};
+#[cfg(feature = "brp")]
+use bevy::remote::{RemotePlugin, http::RemoteHttpPlugin};
+use bevy::{input::ButtonInput, prelude::*};
 #[cfg(feature = "brp")]
 use bevy_brp_extras::BrpExtrasPlugin;
 use split_screen::{
@@ -53,11 +51,11 @@ fn main() {
     app.add_plugins((
         DefaultPlugins.set(common::demo_window_plugin("split_screen_lab")),
         SplitScreenPlugin::default(),
-        RemotePlugin::default(),
     ));
     #[cfg(feature = "brp")]
-    app.add_plugins(BrpExtrasPlugin::with_http_plugin(
-        RemoteHttpPlugin::default(),
+    app.add_plugins((
+        RemotePlugin::default(),
+        BrpExtrasPlugin::with_http_plugin(RemoteHttpPlugin::default()),
     ));
     #[cfg(feature = "e2e")]
     app.add_plugins(e2e::SplitScreenLabE2EPlugin);
