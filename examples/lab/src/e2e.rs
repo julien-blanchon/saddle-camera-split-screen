@@ -1,5 +1,5 @@
 use bevy::{prelude::*, window::PrimaryWindow};
-use bevy_e2e::{
+use saddle_bevy_e2e::{
     E2EPlugin, E2ESet, action::Action, actions::assertions, init_scenario, scenario::Scenario,
 };
 use split_screen::{SplitScreenLayoutMode, SplitScreenRuntime, SplitScreenSystems};
