@@ -14,6 +14,7 @@ fn main() {
         )),
         SplitScreenPlugin::default(),
     ));
+    common::add_debug_pane(&mut app);
     app.insert_resource(SplitScreenConfig {
         two_player: split_screen::SplitScreenTwoPlayerConfig {
             merge_inner_distance: 120.0,

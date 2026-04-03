@@ -20,8 +20,9 @@ Hotkeys:
 
 - `1`: merged two-player framing
 - `2`: diagonal two-player split
-- `3`: four-player layout
-- `4`: per-player UI emphasis
+- `3`: weighted diagonal split
+- `4`: four-player layout
+- `5`: per-player UI emphasis
 - `A`: `SplitScreenMode::Auto`
 - `D`: `SplitScreenMode::DynamicOnly`
 - `F`: `SplitScreenMode::FixedOnly`
@@ -52,6 +53,7 @@ Useful resources and components to inspect:
 cargo run -p split_screen_lab --features e2e -- split_screen_smoke
 cargo run -p split_screen_lab --features e2e -- split_screen_two_player_merge
 cargo run -p split_screen_lab --features e2e -- split_screen_two_player_slanted_split
+cargo run -p split_screen_lab --features e2e -- split_screen_weighted_dynamic
 cargo run -p split_screen_lab --features e2e -- split_screen_resize
 cargo run -p split_screen_lab --features e2e -- split_screen_four_player
 cargo run -p split_screen_lab --features e2e -- split_screen_per_player_ui

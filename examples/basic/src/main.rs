@@ -12,6 +12,7 @@ fn main() {
         DefaultPlugins.set(common::demo_window_plugin("split_screen basic")),
         SplitScreenPlugin::default(),
     ));
+    common::add_debug_pane(&mut app);
     app.insert_resource(SplitScreenConfig {
         mode: SplitScreenMode::FixedOnly,
         two_player: SplitScreenTwoPlayerConfig {

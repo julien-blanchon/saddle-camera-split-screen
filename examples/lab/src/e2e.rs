@@ -1,10 +1,10 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 use saddle_bevy_e2e::{
-    E2EPlugin, E2ESet, action::Action, actions::assertions, init_scenario, scenario::Scenario,
+    action::Action, actions::assertions, init_scenario, scenario::Scenario, E2EPlugin, E2ESet,
 };
-use split_screen::{SplitScreenLayoutMode, SplitScreenRuntime, SplitScreenSystems};
+use split_screen::{LocalPlayerSlot, SplitScreenLayoutMode, SplitScreenRuntime, SplitScreenSystems};
 
-use crate::{LabEntities, LabPresentation, LabPresentationState, apply_presentation};
+use crate::{apply_presentation, LabEntities, LabPresentation, LabPresentationState};
 
 pub struct SplitScreenLabE2EPlugin;
 
@@ -56,6 +56,7 @@ fn list_scenarios() -> Vec<&'static str> {
         "split_screen_smoke",
         "split_screen_two_player_merge",
         "split_screen_two_player_slanted_split",
+        "split_screen_weighted_dynamic",
         "split_screen_resize",
         "split_screen_four_player",
         "split_screen_per_player_ui",
@@ -67,6 +68,7 @@ fn scenario_by_name(name: &str) -> Option<Scenario> {
         "split_screen_smoke" => Some(build_smoke()),
         "split_screen_two_player_merge" => Some(build_two_player_merge()),
         "split_screen_two_player_slanted_split" => Some(build_slanted_split()),
+        "split_screen_weighted_dynamic" => Some(build_weighted_dynamic()),
         "split_screen_resize" => Some(build_resize()),
         "split_screen_four_player" => Some(build_four_player()),
         "split_screen_per_player_ui" => Some(build_per_player_ui()),
@@ -175,6 +177,45 @@ fn build_slanted_split() -> Scenario {
         }))
         .then(assertions::log_summary("split_screen_two_player_slanted_split summary"))
         .then(Action::Screenshot("two_player_slanted_after".into()))
+        .then(Action::WaitFrames(1))
+        .build()
+}
+
+fn build_weighted_dynamic() -> Scenario {
+    Scenario::builder("split_screen_weighted_dynamic")
+        .description(
+            "Switch to the weighted two-player presentation, assert the seam shifts off center and Player 1 receives more viewport area, then capture the result.",
+        )
+        .then(Action::Custom(Box::new(|world| {
+            set_lab_presentation(world, LabPresentation::WeightedSplit);
+        })))
+        .then(Action::WaitFrames(10))
+        .then(assertions::custom("weighted split biases area toward player 1", |world| {
+            let snapshot = snapshot(world);
+            if snapshot.mode != SplitScreenLayoutMode::DynamicTwoPlayer {
+                return false;
+            }
+
+            let Some(view_a) = snapshot.views.iter().find(|view| view.slot == LocalPlayerSlot(0)) else {
+                return false;
+            };
+            let Some(view_b) = snapshot.views.iter().find(|view| view.slot == LocalPlayerSlot(1)) else {
+                return false;
+            };
+            let area_a = view_a.physical.size.x * view_a.physical.size.y;
+            let area_b = view_b.physical.size.x * view_b.physical.size.y;
+            area_a > area_b
+        }))
+        .then(assertions::custom("divider midpoint is no longer centered", |world| {
+            let snapshot = snapshot(world);
+            let Some(divider) = snapshot.divider.as_ref() else {
+                return false;
+            };
+            let midpoint_x = (divider.normalized_start.x + divider.normalized_end.x) * 0.5;
+            (midpoint_x - 0.5).abs() > 0.04
+        }))
+        .then(assertions::log_summary("split_screen_weighted_dynamic summary"))
+        .then(Action::Screenshot("split_screen_weighted_dynamic".into()))
         .then(Action::WaitFrames(1))
         .build()
 }

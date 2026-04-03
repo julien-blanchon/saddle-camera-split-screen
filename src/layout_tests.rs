@@ -127,6 +127,40 @@ fn diagonal_two_player_split_exposes_a_slanted_divider() {
 }
 
 #[test]
+fn weighted_dynamic_divider_tracks_the_actual_vertical_split_ratio() {
+    let config = SplitScreenConfig {
+        mode: SplitScreenMode::DynamicOnly,
+        two_player: SplitScreenTwoPlayerConfig {
+            fixed_layout: SplitScreenTwoPlayerLayout::Vertical,
+            merge_inner_distance: 40.0,
+            merge_outer_distance: 80.0,
+            ..default()
+        },
+        ..default()
+    };
+
+    let snapshot = snapshot_with(
+        config,
+        vec![
+            participant(0, Vec2::new(-220.0, 0.0), 3.0),
+            participant(1, Vec2::new(220.0, 0.0), 1.0),
+        ],
+        Some(SplitScreenLayoutMode::DynamicTwoPlayer),
+        UVec2::new(1280, 720),
+    );
+
+    let divider = snapshot
+        .divider
+        .clone()
+        .expect("weighted dynamic split should expose a divider");
+    let divider_midpoint_x = (divider.normalized_start.x + divider.normalized_end.x) * 0.5;
+
+    assert!(divider_midpoint_x > 0.6);
+    assert!(view(&snapshot, 0).normalized.width() > view(&snapshot, 1).normalized.width());
+    assert_snapshot_is_valid(&snapshot);
+}
+
+#[test]
 fn minimum_viewport_size_clamps_weighted_two_player_regions() {
     let config = SplitScreenConfig {
         mode: SplitScreenMode::DynamicOnly,

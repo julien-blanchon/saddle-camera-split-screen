@@ -1,6 +1,7 @@
 use std::fmt::Write as _;
 
 use bevy::{camera::ClearColorConfig, prelude::*, ui::UiTargetCamera};
+use saddle_pane::prelude::*;
 use split_screen::{
     LocalPlayerSlot, SplitScreenCamera, SplitScreenDividerSnapshot, SplitScreenLayoutMode,
     SplitScreenLayoutSnapshot, SplitScreenRuntime, SplitScreenTarget, SplitScreenUiRoot,
@@ -31,6 +32,62 @@ pub struct DebugOverlayText;
 
 #[derive(Component)]
 pub struct DemoActor;
+
+#[derive(Resource, Pane)]
+#[pane(title = "Split Screen", position = "top-right")]
+pub struct SplitScreenPane {
+    #[pane(tab = "Layout", slider, min = 40.0, max = 220.0, step = 5.0)]
+    pub merge_inner_distance: f32,
+    #[pane(tab = "Layout", slider, min = 60.0, max = 320.0, step = 5.0)]
+    pub merge_outer_distance: f32,
+    #[pane(tab = "Layout", slider, min = 120.0, max = 720.0, step = 10.0)]
+    pub minimum_viewport_width: f32,
+    #[pane(tab = "Divider", slider, min = 0.0, max = 24.0, step = 0.5)]
+    pub divider_width: f32,
+    #[pane(tab = "Divider", slider, min = 0.0, max = 18.0, step = 0.5)]
+    pub divider_feather: f32,
+    #[pane(tab = "Runtime", monitor)]
+    pub mode: String,
+    #[pane(tab = "Runtime", monitor)]
+    pub player_count: usize,
+}
+
+impl Default for SplitScreenPane {
+    fn default() -> Self {
+        let config = split_screen::SplitScreenConfig::default();
+        Self {
+            merge_inner_distance: config.two_player.merge_inner_distance,
+            merge_outer_distance: config.two_player.merge_outer_distance,
+            minimum_viewport_width: config.minimum_viewport_size.x as f32,
+            divider_width: config.divider.width,
+            divider_feather: config.divider.feather,
+            mode: "Shared".into(),
+            player_count: 0,
+        }
+    }
+}
+
+pub fn pane_plugins() -> (
+    bevy_flair::FlairPlugin,
+    bevy_input_focus::InputDispatchPlugin,
+    bevy_ui_widgets::UiWidgetsPlugins,
+    bevy_input_focus::tab_navigation::TabNavigationPlugin,
+    saddle_pane::PanePlugin,
+) {
+    (
+        bevy_flair::FlairPlugin,
+        bevy_input_focus::InputDispatchPlugin,
+        bevy_ui_widgets::UiWidgetsPlugins,
+        bevy_input_focus::tab_navigation::TabNavigationPlugin,
+        saddle_pane::PanePlugin,
+    )
+}
+
+pub fn add_debug_pane(app: &mut App) {
+    app.add_plugins(pane_plugins())
+        .register_pane::<SplitScreenPane>()
+        .add_systems(Update, sync_split_screen_pane);
+}
 
 pub fn demo_window_plugin(title: &str) -> WindowPlugin {
     WindowPlugin {
@@ -316,7 +373,7 @@ pub fn update_hud_text(
 
         text.0 = format!(
             "slot: {}\nmode: {:?}\nactive: {}\nrect: {}\nui camera: {}",
-            slot_text.0.0 + 1,
+            slot_text.0 .0 + 1,
             mode,
             view.is_some_and(|view| view.active),
             view.map(rect_summary).unwrap_or_else(|| "n/a".into()),
@@ -324,6 +381,42 @@ pub fn update_hud_text(
                 .map(|entity| format!("{entity:?}"))
                 .unwrap_or_else(|| "none".into()),
         );
+    }
+}
+
+fn sync_split_screen_pane(
+    mut pane: ResMut<SplitScreenPane>,
+    runtime: Res<SplitScreenRuntime>,
+    mut config: ResMut<split_screen::SplitScreenConfig>,
+) {
+    let pane_added = pane.is_added();
+
+    if pane_added {
+        let pane = pane.bypass_change_detection();
+        pane.merge_inner_distance = config.two_player.merge_inner_distance;
+        pane.merge_outer_distance = config.two_player.merge_outer_distance;
+        pane.minimum_viewport_width = config.minimum_viewport_size.x as f32;
+        pane.divider_width = config.divider.width;
+        pane.divider_feather = config.divider.feather;
+    }
+
+    if pane.is_changed() && !pane_added {
+        config.two_player.merge_inner_distance = pane.merge_inner_distance;
+        config.two_player.merge_outer_distance = pane
+            .merge_outer_distance
+            .max(config.two_player.merge_inner_distance);
+        config.minimum_viewport_size.x = pane.minimum_viewport_width.max(1.0) as u32;
+        config.divider.width = pane.divider_width;
+        config.divider.feather = pane.divider_feather;
+    }
+
+    let pane = pane.bypass_change_detection();
+    if let Some(snapshot) = primary_snapshot(&runtime) {
+        pane.mode = format!("{:?}", snapshot.mode);
+        pane.player_count = snapshot.views.iter().filter(|view| view.active).count();
+    } else {
+        pane.mode = "Shared".into();
+        pane.player_count = 0;
     }
 }
 

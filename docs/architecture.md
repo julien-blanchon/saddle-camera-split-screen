@@ -22,6 +22,8 @@ Two-player mode uses a hybrid strategy:
 
 The shipping viewport path stays rectangular because Bevy `Viewport` is rectangular by design. The runtime still computes a divider direction from the players' relative positions and exposes it in `SplitScreenDividerSnapshot`, so consumers can render a slanted seam or add a custom compositor later without rewriting the slot and layout model.
 
+When the balance policy is weighted, the runtime now also tracks the actual split ratio used for the rectangular layout. Divider metadata is emitted from that true ratio instead of assuming a centered seam, which keeps debug overlays and custom compositors aligned with weighted view ownership.
+
 ## Fixed And Hybrid Layouts
 
 Three- and four-player layouts favor readability and deterministic ownership:

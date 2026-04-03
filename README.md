@@ -8,13 +8,13 @@ The crate manages local-player slot ownership, viewport layout, merged-versus-sp
 
 ```toml
 [dependencies]
-split_screen = { path = "shared/camera/split_screen" }
+saddle-camera-split-screen = { git = "https://github.com/julien-blanchon/saddle-camera-split-screen" }
 bevy = "0.18"
 ```
 
 ```rust,no_run
 use bevy::prelude::*;
-use split_screen::{
+use saddle_camera_split_screen::{
     LocalPlayerSlot, SplitScreenCamera, SplitScreenPlugin, SplitScreenTarget, SplitScreenView,
 };
 
@@ -75,6 +75,8 @@ For always-on examples and debug tools, `SplitScreenPlugin::always_on(Update)` i
 
 The current production path is a viewport-first hybrid. Two-player mode computes a dynamic divider direction and smooth merge/split transition, then applies the closest practical rectangular layout while exposing divider metadata for overlays or custom compositors. Three- and four-player layouts favor stable readable regions with weighted balancing over aggressive experimental partitioning.
 
+All crate-local examples include a live `saddle-pane` panel for merge thresholds, divider styling, and viewport sizing.
+
 ## Public API
 
 | Type | Purpose |
@@ -133,14 +135,18 @@ The current production path is a viewport-first hybrid. Two-player mode computes
 
 | Example | Purpose | Run |
 | --- | --- | --- |
-| `basic` | Minimal two-player fixed split with viewport ownership | `cargo run -p split_screen --example basic` |
-| `dynamic_two_player` | Merge/split transitions with a dynamic divider overlay | `cargo run -p split_screen --example dynamic_two_player` |
-| `four_player` | Four-player grid and strip-ready layout path | `cargo run -p split_screen --example four_player` |
-| `per_player_ui` | Slot-targeted HUD roots using automatic `UiTargetCamera` retargeting | `cargo run -p split_screen --example per_player_ui` |
+| `basic` | Minimal two-player fixed split with viewport ownership | `cargo run -p split_screen_example_basic` |
+| `dynamic_two_player` | Merge/split transitions with a dynamic divider overlay | `cargo run -p split_screen_example_dynamic_two_player` |
+| `weighted_dynamic` | Weighted two-player split where the divider tracks the actual area ratio | `cargo run -p split_screen_example_weighted_dynamic` |
+| `third_person_coop` | Split-screen composed with `saddle-camera-third-person-camera` for a weighted third-person co-op scene | `cargo run -p saddle-camera-split-screen-example-third-person-coop` |
+| `four_player` | Four-player grid and strip-ready layout path | `cargo run -p split_screen_example_four_player` |
+| `per_player_ui` | Slot-targeted HUD roots using automatic `UiTargetCamera` retargeting | `cargo run -p split_screen_example_per_player_ui` |
+
+Every example now includes a live `saddle-pane` panel. The third-person coop demo layers a second pane over the split-screen controls so the viewport rules and both follow cameras can be tuned together.
 
 ## Workspace Lab
 
-The richer verification app lives inside the crate at `shared/camera/split_screen/examples/lab`:
+The richer verification app lives inside the crate at `shared/camera/saddle-camera-split-screen/examples/lab`:
 
 ```bash
 cargo run -p split_screen_lab
@@ -150,6 +156,7 @@ With E2E enabled:
 
 ```bash
 cargo run -p split_screen_lab --features e2e -- split_screen_smoke
+cargo run -p split_screen_lab --features e2e -- split_screen_weighted_dynamic
 ```
 
 For live inspection over BRP, use the crate-local lab README:

@@ -34,6 +34,7 @@ Interactions:
 
 - keep `merge_outer_distance` above `merge_inner_distance` or the hysteresis band collapses
 - `fixed_layout = Vertical` or `Horizontal` effectively locks the split family while preserving merge behavior
+- when `balance_policy = Weighted`, the actual divider position is also biased by each slot's `SplitScreenView::area_weight`
 
 ## `SplitScreenThreePlayerConfig`
 

@@ -16,6 +16,7 @@ fn main() {
         DefaultPlugins.set(common::demo_window_plugin("split_screen per_player_ui")),
         SplitScreenPlugin::default(),
     ));
+    common::add_debug_pane(&mut app);
     app.insert_resource(SplitScreenConfig {
         two_player: split_screen::SplitScreenTwoPlayerConfig {
             merge_inner_distance: 110.0,

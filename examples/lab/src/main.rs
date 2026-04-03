@@ -16,6 +16,7 @@ use split_screen::{
 enum LabPresentation {
     Merge,
     SlantedSplit,
+    WeightedSplit,
     FourPlayer,
     PerPlayerUi,
 }
@@ -52,6 +53,7 @@ fn main() {
         DefaultPlugins.set(common::demo_window_plugin("split_screen_lab")),
         SplitScreenPlugin::default(),
     ));
+    common::add_debug_pane(&mut app);
     #[cfg(feature = "brp")]
     app.add_plugins((
         RemotePlugin::default(),
@@ -209,9 +211,12 @@ fn handle_hotkeys(
         next_presentation = Some(LabPresentation::SlantedSplit);
     }
     if keys.just_pressed(KeyCode::Digit3) {
-        next_presentation = Some(LabPresentation::FourPlayer);
+        next_presentation = Some(LabPresentation::WeightedSplit);
     }
     if keys.just_pressed(KeyCode::Digit4) {
+        next_presentation = Some(LabPresentation::FourPlayer);
+    }
+    if keys.just_pressed(KeyCode::Digit5) {
         next_presentation = Some(LabPresentation::PerPlayerUi);
     }
 
@@ -244,7 +249,7 @@ fn update_status_text(
     };
 
     text.0 = format!(
-        "scene: {:?}\nmode override: {:?}\nslots: [1,2,3,4] entities ready\nkeys: 1 merge 2 slanted 3 four 4 ui | A auto D dynamic F fixed S shared\noverlay camera: {:?}",
+        "scene: {:?}\nmode override: {:?}\nslots: [1,2,3,4] entities ready\nkeys: 1 merge 2 slanted 3 weighted 4 four 5 ui | A auto D dynamic F fixed S shared\noverlay camera: {:?}",
         presentation.presentation, config.mode, entities.overlay_camera,
     );
 }
@@ -274,6 +279,12 @@ pub(crate) fn apply_presentation(
         LabPresentation::SlantedSplit => [
             Some((Vec2::new(-260.0, -180.0), 1.0)),
             Some((Vec2::new(260.0, 180.0), 1.0)),
+            None,
+            None,
+        ],
+        LabPresentation::WeightedSplit => [
+            Some((Vec2::new(-320.0, -140.0), 1.7)),
+            Some((Vec2::new(240.0, 140.0), 0.7)),
             None,
             None,
         ],

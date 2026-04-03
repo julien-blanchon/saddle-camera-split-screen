@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
 use crate::{
-    LocalPlayerSlot, SplitScreenAspectPolicy, SplitScreenBalancePolicy, SplitScreenConfig,
+    math, LocalPlayerSlot, SplitScreenAspectPolicy, SplitScreenBalancePolicy, SplitScreenConfig,
     SplitScreenFourPlayerLayout, SplitScreenMode, SplitScreenMultiPlayerStrategy,
-    SplitScreenPadding, SplitScreenThreePlayerLayout, SplitScreenTwoPlayerLayout, math,
+    SplitScreenPadding, SplitScreenThreePlayerLayout, SplitScreenTwoPlayerLayout,
 };
 
 #[derive(Reflect, Debug, Clone, Copy, PartialEq, Default)]
@@ -438,7 +438,7 @@ fn dynamic_two_player_snapshot(
                 .max(0.001),
     );
 
-    let plans = split_two_dynamic(
+    let (plans, ratio) = split_two_dynamic(
         participants,
         axis,
         owner,
@@ -447,7 +447,7 @@ fn dynamic_two_player_snapshot(
         context.config.safe_area_padding,
         context.config.minimum_viewport_size,
     );
-    let divider = dynamic_divider_snapshot(context, delta, alpha);
+    let divider = dynamic_divider_snapshot(context, axis, ratio, delta, alpha);
 
     (
         SplitScreenLayoutMode::DynamicTwoPlayer,
@@ -574,7 +574,7 @@ fn split_two_dynamic(
     target_size: UVec2,
     padding: SplitScreenPadding,
     minimum_viewport_size: UVec2,
-) -> Vec<ViewPlan> {
+) -> (Vec<ViewPlan>, f32) {
     let usable = math::usable_target_size(target_size, padding);
     let (first, second) = order_two_participants(participants, axis);
     let total_weight = (first.area_weight + second.area_weight).max(0.001);
@@ -582,7 +582,7 @@ fn split_two_dynamic(
     let desired_ratio = (first.area_weight / total_weight).clamp(min_fraction, 1.0 - min_fraction);
     let start_ratio = if first.slot == owner { 1.0 } else { 0.0 };
     let ratio = start_ratio + (desired_ratio - start_ratio) * alpha;
-    plans_from_two_split(first, second, axis, ratio)
+    (plans_from_two_split(first, second, axis, ratio), ratio)
 }
 
 fn plans_from_two_split(
@@ -1141,6 +1141,8 @@ fn fixed_divider_snapshot(
 
 fn dynamic_divider_snapshot(
     context: LayoutContext<'_>,
+    axis: LayoutAxis,
+    ratio: f32,
     delta: Vec2,
     alpha: f32,
 ) -> Option<SplitScreenDividerSnapshot> {
@@ -1149,14 +1151,22 @@ fn dynamic_divider_snapshot(
     }
 
     let direction = if delta.length_squared() <= 0.0001 {
-        Vec2::X
+        match axis {
+            LayoutAxis::Vertical => Vec2::Y,
+            LayoutAxis::Horizontal => Vec2::X,
+        }
     } else {
         Vec2::new(-delta.y, delta.x).normalize()
     };
-    let center = Vec2::splat(0.5);
-    let half_span = direction * 0.75;
-    let normalized_start = (center - half_span).clamp(Vec2::ZERO, Vec2::ONE);
-    let normalized_end = (center + half_span).clamp(Vec2::ZERO, Vec2::ONE);
+    let center = match axis {
+        LayoutAxis::Vertical => Vec2::new(ratio, 0.5),
+        LayoutAxis::Horizontal => Vec2::new(0.5, ratio),
+    };
+    let (normalized_start, normalized_end) = clipped_unit_square_segment(center, direction)
+        .unwrap_or_else(|| match axis {
+            LayoutAxis::Vertical => (Vec2::new(ratio, 0.0), Vec2::new(ratio, 1.0)),
+            LayoutAxis::Horizontal => (Vec2::new(0.0, ratio), Vec2::new(1.0, ratio)),
+        });
 
     Some(SplitScreenDividerSnapshot {
         physical_start: math::normalized_point_to_physical(
@@ -1175,6 +1185,39 @@ fn dynamic_divider_snapshot(
         feather: context.config.divider.feather,
         color: context.config.divider.color,
     })
+}
+
+fn clipped_unit_square_segment(origin: Vec2, direction: Vec2) -> Option<(Vec2, Vec2)> {
+    let mut hits = Vec::new();
+    let epsilon = 0.0001;
+
+    if direction.x.abs() > epsilon {
+        for boundary_x in [0.0, 1.0] {
+            let t = (boundary_x - origin.x) / direction.x;
+            let point = origin + direction * t;
+            if (-epsilon..=1.0 + epsilon).contains(&point.y) {
+                hits.push(point.clamp(Vec2::ZERO, Vec2::ONE));
+            }
+        }
+    }
+    if direction.y.abs() > epsilon {
+        for boundary_y in [0.0, 1.0] {
+            let t = (boundary_y - origin.y) / direction.y;
+            let point = origin + direction * t;
+            if (-epsilon..=1.0 + epsilon).contains(&point.x) {
+                hits.push(point.clamp(Vec2::ZERO, Vec2::ONE));
+            }
+        }
+    }
+
+    hits.sort_by(|left, right| left.x.total_cmp(&right.x).then(left.y.total_cmp(&right.y)));
+    hits.dedup_by(|left, right| left.distance_squared(*right) <= 0.0001);
+
+    if hits.len() >= 2 {
+        Some((hits[0], *hits.last().unwrap()))
+    } else {
+        None
+    }
 }
 
 #[cfg(test)]

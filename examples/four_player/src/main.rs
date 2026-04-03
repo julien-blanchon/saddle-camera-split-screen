@@ -18,6 +18,7 @@ fn main() {
         DefaultPlugins.set(common::demo_window_plugin("split_screen four_player")),
         SplitScreenPlugin::default(),
     ));
+    common::add_debug_pane(&mut app);
     app.insert_resource(SplitScreenConfig {
         mode: SplitScreenMode::FixedOnly,
         four_player: SplitScreenFourPlayerConfig {
