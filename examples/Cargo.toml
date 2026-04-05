@@ -1,5 +1,5 @@
 [workspace]
-members = ["common", "basic", "dynamic_two_player", "weighted_dynamic", "third_person_coop", "four_player", "per_player_ui", "lab"]
+members = ["common", "basic", "dynamic_two_player", "weighted_dynamic", "third_person_coop", "four_player", "per_player_ui", "dynamic_join", "lab"]
 resolver = "3"
 
 [workspace.dependencies]

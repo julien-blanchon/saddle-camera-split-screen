@@ -71,3 +71,46 @@ pub(crate) fn normalized_point_to_physical(
             point.y.clamp(0.0, 1.0) * usable.y,
         )
 }
+
+pub(crate) fn letterbox_physical(rect: PhysicalRect, target_aspect: f32) -> PhysicalRect {
+    if rect.size.x == 0 || rect.size.y == 0 || target_aspect <= 0.0 {
+        return rect;
+    }
+    let current_aspect = rect.size.x as f32 / rect.size.y as f32;
+    if (current_aspect - target_aspect).abs() < 0.01 {
+        return rect;
+    }
+    let (new_w, new_h) = if current_aspect > target_aspect {
+        let w = (rect.size.y as f32 * target_aspect).round() as u32;
+        (w.min(rect.size.x), rect.size.y)
+    } else {
+        let h = (rect.size.x as f32 / target_aspect).round() as u32;
+        (rect.size.x, h.min(rect.size.y))
+    };
+    let offset_x = (rect.size.x.saturating_sub(new_w)) / 2;
+    let offset_y = (rect.size.y.saturating_sub(new_h)) / 2;
+    PhysicalRect {
+        position: UVec2::new(rect.position.x + offset_x, rect.position.y + offset_y),
+        size: UVec2::new(new_w, new_h),
+    }
+}
+
+pub(crate) fn lerp_normalized_rect(
+    from: crate::NormalizedRect,
+    to: crate::NormalizedRect,
+    t: f32,
+) -> crate::NormalizedRect {
+    crate::NormalizedRect {
+        min: from.min.lerp(to.min, t),
+        max: from.max.lerp(to.max, t),
+    }
+}
+
+pub(crate) fn ease(value: f32, easing: crate::SplitScreenTransitionEasing) -> f32 {
+    let t = value.clamp(0.0, 1.0);
+    match easing {
+        crate::SplitScreenTransitionEasing::Linear => t,
+        crate::SplitScreenTransitionEasing::SmoothStep => smoothstep(t),
+        crate::SplitScreenTransitionEasing::EaseOutCubic => 1.0 - (1.0 - t).powi(3),
+    }
+}

@@ -63,8 +63,12 @@ For always-on examples and debug tools, `SplitScreenPlugin::always_on(Update)` i
 - tracks world-space influence anchors through `SplitScreenTarget`
 - partitions a render target into per-slot viewports
 - collapses two-player sessions into a shared view when the tracked targets are close
+- **animated layout transitions** when players join/leave or layouts change (configurable duration, easing)
+- **letterboxing/pillarboxing** to maintain per-player aspect ratio within split viewports
+- **per-viewport border decorations** with per-slot color support
 - reassigns `UiTargetCamera` on `SplitScreenUiRoot` nodes so each HUD follows the correct view
 - exposes runtime snapshots and messages so other systems can inspect the current layout
+- supports **dynamic player join/leave** — add/remove `SplitScreenCamera` and `SplitScreenTarget` at runtime and viewports rebalance automatically
 
 ## What It Does Not Do
 
@@ -106,6 +110,9 @@ All crate-local examples include a live `saddle-pane` panel for merge thresholds
 - `balance_policy`: uniform or weighted area balancing using `SplitScreenView::area_weight`
 - `default_projection`: how `SplitScreenTarget` positions collapse from `Vec3` to layout space when the component does not override it
 - `resize_debounce_frames`: coalesces resize-driven layout-change messages during rapid window changes
+- `transition`: animated viewport transitions (duration, easing: `Linear`, `SmoothStep`, `EaseOutCubic`)
+- `letterbox`: per-player aspect ratio enforcement (`None`, `Maintain16x9`, `Maintain4x3`, `Custom(ratio)`) with configurable fill color
+- `border`: per-viewport border decorations (width, color, per-slot colors)
 
 ## Integration Notes
 
@@ -138,6 +145,7 @@ All crate-local examples include a live `saddle-pane` panel for merge thresholds
 | `basic` | Minimal two-player fixed split with viewport ownership | `cargo run -p split_screen_example_basic` |
 | `dynamic_two_player` | Merge/split transitions with a dynamic divider overlay | `cargo run -p split_screen_example_dynamic_two_player` |
 | `weighted_dynamic` | Weighted two-player split where the divider tracks the actual area ratio | `cargo run -p split_screen_example_weighted_dynamic` |
+| `dynamic_join` | Press 1-4 to toggle players on/off with animated viewport transitions | `cargo run -p split_screen_example_dynamic_join` |
 | `third_person_coop` | Split-screen composed with `saddle-camera-third-person-camera` for a weighted third-person co-op scene | `cargo run -p saddle-camera-split-screen-example-third-person-coop` |
 | `four_player` | Four-player grid and strip-ready layout path | `cargo run -p split_screen_example_four_player` |
 | `per_player_ui` | Slot-targeted HUD roots using automatic `UiTargetCamera` retargeting | `cargo run -p split_screen_example_per_player_ui` |

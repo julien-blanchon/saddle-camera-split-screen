@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
 use crate::{
-    math, LocalPlayerSlot, SplitScreenAspectPolicy, SplitScreenBalancePolicy, SplitScreenConfig,
+    LocalPlayerSlot, SplitScreenAspectPolicy, SplitScreenBalancePolicy, SplitScreenConfig,
     SplitScreenFourPlayerLayout, SplitScreenMode, SplitScreenMultiPlayerStrategy,
-    SplitScreenPadding, SplitScreenThreePlayerLayout, SplitScreenTwoPlayerLayout,
+    SplitScreenPadding, SplitScreenThreePlayerLayout, SplitScreenTwoPlayerLayout, math,
 };
 
 #[derive(Reflect, Debug, Clone, Copy, PartialEq, Default)]
@@ -69,6 +69,9 @@ pub struct SplitScreenViewSnapshot {
     pub normalized: NormalizedRect,
     pub physical: PhysicalRect,
     pub area_weight: f32,
+    pub letterboxed_physical: Option<PhysicalRect>,
+    pub border_color: Option<Color>,
+    pub border_width: f32,
 }
 
 #[derive(Reflect, Debug, Clone, PartialEq)]
@@ -105,6 +108,8 @@ pub struct SplitScreenRuntime {
     pub frame_serial: u64,
     pub last_resize_window: Option<Entity>,
     pub snapshots: Vec<SplitScreenLayoutSnapshot>,
+    pub transition_progress: f32,
+    pub transition_active: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -174,16 +179,38 @@ pub(crate) fn build_layout_snapshot(context: LayoutContext<'_>) -> SplitScreenLa
 
     let views = plans
         .into_iter()
-        .map(|plan| SplitScreenViewSnapshot {
-            physical: math::normalized_to_physical(
+        .map(|plan| {
+            let physical = math::normalized_to_physical(
                 plan.rect,
                 context.target_size,
                 context.config.safe_area_padding,
-            ),
-            slot: plan.slot,
-            active: plan.active,
-            normalized: plan.rect,
-            area_weight: plan.area_weight,
+            );
+            let letterboxed_physical = context
+                .config
+                .letterbox
+                .policy
+                .target_aspect_ratio()
+                .map(|target_ratio| math::letterbox_physical(physical, target_ratio));
+            let border_color = if context.config.border.enabled {
+                Some(context.config.border.color_for_slot(plan.slot.index()))
+            } else {
+                None
+            };
+            let border_width = if context.config.border.enabled {
+                context.config.border.width
+            } else {
+                0.0
+            };
+            SplitScreenViewSnapshot {
+                physical,
+                slot: plan.slot,
+                active: plan.active,
+                normalized: plan.rect,
+                area_weight: plan.area_weight,
+                letterboxed_physical,
+                border_color,
+                border_width,
+            }
         })
         .collect();
 

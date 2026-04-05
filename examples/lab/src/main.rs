@@ -19,6 +19,7 @@ enum LabPresentation {
     WeightedSplit,
     FourPlayer,
     PerPlayerUi,
+    DynamicJoin,
 }
 
 #[derive(Resource, Debug, Clone, Copy, Reflect)]
@@ -219,6 +220,9 @@ fn handle_hotkeys(
     if keys.just_pressed(KeyCode::Digit5) {
         next_presentation = Some(LabPresentation::PerPlayerUi);
     }
+    if keys.just_pressed(KeyCode::Digit6) {
+        next_presentation = Some(LabPresentation::DynamicJoin);
+    }
 
     if keys.just_pressed(KeyCode::KeyA) {
         config.mode = SplitScreenMode::Auto;
@@ -249,7 +253,7 @@ fn update_status_text(
     };
 
     text.0 = format!(
-        "scene: {:?}\nmode override: {:?}\nslots: [1,2,3,4] entities ready\nkeys: 1 merge 2 slanted 3 weighted 4 four 5 ui | A auto D dynamic F fixed S shared\noverlay camera: {:?}",
+        "scene: {:?}\nmode override: {:?}\nslots: [1,2,3,4] entities ready\nkeys: 1 merge 2 slanted 3 weighted 4 four 5 ui 6 join | A auto D dynamic F fixed S shared\noverlay camera: {:?}",
         presentation.presentation, config.mode, entities.overlay_camera,
     );
 }
@@ -298,6 +302,12 @@ pub(crate) fn apply_presentation(
             Some((Vec2::new(-220.0, 0.0), 1.0)),
             Some((Vec2::new(220.0, 0.0), 1.0)),
             None,
+            None,
+        ],
+        LabPresentation::DynamicJoin => [
+            Some((Vec2::new(-280.0, 140.0), 1.0)),
+            Some((Vec2::new(280.0, 140.0), 1.0)),
+            Some((Vec2::new(-280.0, -140.0), 1.0)),
             None,
         ],
     };

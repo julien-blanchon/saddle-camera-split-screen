@@ -9,11 +9,13 @@ pub use components::{
     LocalPlayerSlot, SplitScreenCamera, SplitScreenTarget, SplitScreenUiRoot, SplitScreenView,
 };
 pub use config::{
-    SplitScreenAspectPolicy, SplitScreenBalancePolicy, SplitScreenConfig, SplitScreenDebugConfig,
-    SplitScreenDividerStyle, SplitScreenFourPlayerConfig, SplitScreenFourPlayerLayout,
+    SplitScreenAspectPolicy, SplitScreenBalancePolicy, SplitScreenBorderConfig, SplitScreenConfig,
+    SplitScreenDebugConfig, SplitScreenDividerStyle, SplitScreenFourPlayerConfig,
+    SplitScreenFourPlayerLayout, SplitScreenLetterboxConfig, SplitScreenLetterboxPolicy,
     SplitScreenMode, SplitScreenMultiPlayerStrategy, SplitScreenPadding,
     SplitScreenProjectionPlane, SplitScreenThreePlayerConfig, SplitScreenThreePlayerLayout,
-    SplitScreenTwoPlayerConfig, SplitScreenTwoPlayerLayout,
+    SplitScreenTransitionConfig, SplitScreenTransitionEasing, SplitScreenTwoPlayerConfig,
+    SplitScreenTwoPlayerLayout,
 };
 pub use layout::{
     NormalizedRect, PhysicalRect, SplitScreenDividerSnapshot, SplitScreenLayoutMode,
@@ -93,6 +95,11 @@ impl Plugin for SplitScreenPlugin {
             .register_type::<PhysicalRect>()
             .register_type::<SplitScreenAspectPolicy>()
             .register_type::<SplitScreenBalancePolicy>()
+            .register_type::<SplitScreenBorderConfig>()
+            .register_type::<SplitScreenLetterboxConfig>()
+            .register_type::<SplitScreenLetterboxPolicy>()
+            .register_type::<SplitScreenTransitionConfig>()
+            .register_type::<SplitScreenTransitionEasing>()
             .register_type::<SplitScreenCamera>()
             .register_type::<SplitScreenConfig>()
             .register_type::<SplitScreenDebugConfig>()

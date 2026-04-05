@@ -40,6 +40,27 @@ Three- and four-player layouts favor readability and deterministic ownership:
 - In split mode, each slot points at its chosen UI-anchor camera.
 - In merged shared mode, all slot HUD roots target the merged owner's camera so UI stays visible even though the other cameras are inactive.
 
+## Animated Layout Transitions
+
+When a layout change is detected (different mode, different number of views, or significantly different normalized rects), the runtime starts a transition animation:
+
+1. The previous normalized rects for each slot are stored as "from" values.
+2. The new computed rects become "to" values.
+3. Each frame, the runtime advances a progress counter based on delta time and the configured duration.
+4. The eased progress is used to lerp between from/to rects.
+5. The interpolated rects are converted to physical viewports and applied to cameras.
+
+For newly joining players, the "from" rect defaults to zero (collapsed), so the viewport slides in from nothing. For departing players, the remaining viewports smoothly expand to fill the vacated space.
+
+The transition system respects the existing merge/split hysteresis — merge transitions use the dynamic alpha, while layout transitions use the configurable easing curve.
+
+## Letterboxing and Borders
+
+After computing (and optionally interpolating) each view's normalized rect:
+
+- **Letterboxing**: if a `SplitScreenLetterboxPolicy` is active, each view's physical rect is shrunk to maintain the target aspect ratio, centered within the allocated region. The `letterboxed_physical` field on each `SplitScreenViewSnapshot` contains the result, and the camera viewport uses this adjusted rect.
+- **Borders**: if `SplitScreenBorderConfig` is enabled, each view snapshot includes `border_color` and `border_width` metadata. The crate does not render borders itself — this is presentation metadata for overlay systems or consumers.
+
 ## Performance Notes
 
 Layout computation is cheap:

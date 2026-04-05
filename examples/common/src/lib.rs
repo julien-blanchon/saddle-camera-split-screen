@@ -373,7 +373,7 @@ pub fn update_hud_text(
 
         text.0 = format!(
             "slot: {}\nmode: {:?}\nactive: {}\nrect: {}\nui camera: {}",
-            slot_text.0 .0 + 1,
+            slot_text.0.0 + 1,
             mode,
             view.is_some_and(|view| view.active),
             view.map(rect_summary).unwrap_or_else(|| "n/a".into()),

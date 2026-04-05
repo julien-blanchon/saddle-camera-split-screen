@@ -8,10 +8,10 @@ use bevy::{
 };
 
 use crate::{
-    LocalPlayerSlot, SplitScreenCamera, SplitScreenConfig, SplitScreenLayoutChanged,
-    SplitScreenLayoutMode, SplitScreenModeChanged, SplitScreenPlayerViewAssigned,
-    SplitScreenProjectionPlane, SplitScreenRuntime, SplitScreenTarget, SplitScreenUiRoot,
-    SplitScreenView, SplitScreenViewSnapshot, layout,
+    LocalPlayerSlot, NormalizedRect, SplitScreenCamera, SplitScreenConfig,
+    SplitScreenLayoutChanged, SplitScreenLayoutMode, SplitScreenModeChanged,
+    SplitScreenPlayerViewAssigned, SplitScreenProjectionPlane, SplitScreenRuntime,
+    SplitScreenTarget, SplitScreenUiRoot, SplitScreenView, SplitScreenViewSnapshot, layout, math,
 };
 
 #[derive(Resource, Default)]
@@ -23,6 +23,10 @@ pub(crate) struct SplitScreenInternalState {
     resize_hold: HashMap<Entity, u8>,
     camera_plans: HashMap<Entity, CameraPlan>,
     ui_targets: HashMap<LocalPlayerSlot, Entity>,
+    transition_from: HashMap<LocalPlayerSlot, NormalizedRect>,
+    transition_to: HashMap<LocalPlayerSlot, NormalizedRect>,
+    transition_progress: f32,
+    transition_active: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -66,8 +70,14 @@ pub(crate) fn clear_internal_state(
     internal.resize_hold.clear();
     internal.camera_plans.clear();
     internal.ui_targets.clear();
+    internal.transition_from.clear();
+    internal.transition_to.clear();
+    internal.transition_progress = 0.0;
+    internal.transition_active = false;
     runtime.active = false;
     runtime.snapshots.clear();
+    runtime.transition_progress = 0.0;
+    runtime.transition_active = false;
 }
 
 pub(crate) fn restore_managed_cameras(mut cameras: Query<&mut Camera, With<SplitScreenCamera>>) {
@@ -216,6 +226,7 @@ pub(crate) fn collect_scene_state(
 
 pub(crate) fn compute_layouts(
     config: Res<SplitScreenConfig>,
+    time: Res<Time>,
     mut internal: ResMut<SplitScreenInternalState>,
     mut runtime: ResMut<SplitScreenRuntime>,
 ) {
@@ -228,6 +239,17 @@ pub(crate) fn compute_layouts(
 
     let groups = internal.groups.clone();
     let previous_snapshots = internal.last_emitted_snapshots.clone();
+
+    if internal.transition_active && config.transition.enabled {
+        let dt = time.delta_secs();
+        let duration = config.transition.duration_seconds.max(0.01);
+        internal.transition_progress = (internal.transition_progress + dt / duration).min(1.0);
+        if internal.transition_progress >= 1.0 {
+            internal.transition_active = false;
+            internal.transition_from.clear();
+            internal.transition_to.clear();
+        }
+    }
 
     for group in &groups {
         let layout_participants: Vec<_> = group
@@ -242,13 +264,71 @@ pub(crate) fn compute_layouts(
         let previous_mode = previous_snapshots
             .get(&group.target)
             .map(|snapshot| snapshot.mode);
-        let snapshot = layout::build_layout_snapshot(layout::LayoutContext {
+        let mut snapshot = layout::build_layout_snapshot(layout::LayoutContext {
             target_window: group.target_window,
             target_size: group.target_size,
             participants: &layout_participants,
             previous_mode,
             config: &config,
         });
+
+        let prev_views = previous_snapshots.get(&group.target);
+        let layout_changed = prev_views.is_some_and(|prev| {
+            prev.views.len() != snapshot.views.len()
+                || prev.mode != snapshot.mode
+                || prev.views.iter().zip(&snapshot.views).any(|(left, right)| {
+                    left.slot != right.slot
+                        || (left.normalized.min - right.normalized.min).length() > 0.01
+                        || (left.normalized.max - right.normalized.max).length() > 0.01
+                })
+        });
+
+        if layout_changed && config.transition.enabled && !internal.transition_active {
+            internal.transition_from.clear();
+            internal.transition_to.clear();
+            if let Some(prev) = prev_views {
+                for view in &prev.views {
+                    internal.transition_from.insert(view.slot, view.normalized);
+                }
+            }
+            for view in &snapshot.views {
+                internal.transition_to.insert(view.slot, view.normalized);
+            }
+            internal.transition_progress = 0.0;
+            internal.transition_active = true;
+        }
+
+        if internal.transition_active && config.transition.enabled {
+            let eased_t = math::ease(internal.transition_progress, config.transition.easing);
+            for view in &mut snapshot.views {
+                let from = internal
+                    .transition_from
+                    .get(&view.slot)
+                    .copied()
+                    .unwrap_or(NormalizedRect::zero());
+                let to = internal
+                    .transition_to
+                    .get(&view.slot)
+                    .copied()
+                    .unwrap_or(view.normalized);
+                let lerped = math::lerp_normalized_rect(from, to, eased_t);
+                view.normalized = lerped;
+                view.physical = math::normalized_to_physical(
+                    lerped,
+                    group.target_size,
+                    config.safe_area_padding,
+                );
+                if let Some(target_ratio) = config.letterbox.policy.target_aspect_ratio() {
+                    view.letterboxed_physical =
+                        Some(math::letterbox_physical(view.physical, target_ratio));
+                }
+                view.active = lerped.width() > 0.01 && lerped.height() > 0.01;
+            }
+            snapshot.transition_alpha = eased_t;
+        }
+
+        runtime.transition_progress = internal.transition_progress;
+        runtime.transition_active = internal.transition_active;
 
         let merged_target = snapshot.merged_owner.and_then(|slot| {
             group
@@ -276,12 +356,21 @@ pub(crate) fn compute_layouts(
                 internal.ui_targets.insert(participant.slot, camera);
             }
 
-            let viewport = viewport_from_snapshot(view_snapshot);
+            let effective_view = if view_snapshot.letterboxed_physical.is_some() {
+                let mut modified = view_snapshot.clone();
+                if let Some(lb) = modified.letterboxed_physical {
+                    modified.physical = lb;
+                }
+                modified
+            } else {
+                view_snapshot.clone()
+            };
+            let viewport = viewport_from_snapshot(&effective_view);
             for camera in &participant.cameras {
                 internal.camera_plans.insert(
                     *camera,
                     CameraPlan {
-                        active: view_snapshot.active,
+                        active: effective_view.active,
                         viewport: viewport.clone(),
                     },
                 );

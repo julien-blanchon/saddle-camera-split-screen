@@ -19,6 +19,9 @@
 | `safe_area_padding` | `SplitScreenPadding` | `16px` on each edge | `>= 0` | Insets the usable render area before viewports are generated |
 | `minimum_viewport_size` | `UVec2` | `220 x 140` | `>= 1` | Lower bound used while solving split fractions |
 | `resize_debounce_frames` | `u8` | `2` | `0..=255` | Number of update ticks to suppress resize-driven layout-change messages after a resize event |
+| `transition` | `SplitScreenTransitionConfig` | see below | n/a | Animated viewport transition settings |
+| `letterbox` | `SplitScreenLetterboxConfig` | see below | n/a | Per-viewport aspect ratio enforcement |
+| `border` | `SplitScreenBorderConfig` | see below | n/a | Per-viewport border decoration metadata |
 | `debug` | `SplitScreenDebugConfig` | see below | n/a | Logging and debug-surface toggles |
 
 ## `SplitScreenTwoPlayerConfig`
@@ -71,6 +74,36 @@ All values are physical pixels.
 | `bottom` | `u32` | `16` | Insets the bottom edge of the usable layout area |
 
 Use larger padding for UI-heavy HUDs that need breathing room inside each viewport.
+
+## `SplitScreenTransitionConfig`
+
+| Field | Type | Default | Valid Range | Effect |
+| --- | --- | --- | --- | --- |
+| `enabled` | `bool` | `true` | `true/false` | Enables or disables animated layout transitions |
+| `duration_seconds` | `f32` | `0.35` | `> 0` | Duration of a viewport transition animation in seconds |
+| `easing` | `SplitScreenTransitionEasing` | `SmoothStep` | enum | Easing curve: `Linear`, `SmoothStep`, or `EaseOutCubic` |
+
+When a layout change is detected (player join/leave, mode switch, etc.), viewports smoothly interpolate from their previous normalized rects to their new targets over `duration_seconds`. Set `enabled = false` to snap immediately.
+
+## `SplitScreenLetterboxConfig`
+
+| Field | Type | Default | Valid Range | Effect |
+| --- | --- | --- | --- | --- |
+| `policy` | `SplitScreenLetterboxPolicy` | `None` | enum | Aspect ratio enforcement: `None`, `Maintain16x9`, `Maintain4x3`, or `Custom(f32)` |
+| `fill_color` | `Color` | `Color::BLACK` | any color | Color of the letterbox/pillarbox bars (rendering is up to the consumer or overlay system) |
+
+When a non-`None` policy is active, the physical viewport of each player is shrunk to fit the target aspect ratio, centered within the allocated region. The `letterboxed_physical` field on `SplitScreenViewSnapshot` contains the adjusted rect, and is used for camera viewport assignment.
+
+## `SplitScreenBorderConfig`
+
+| Field | Type | Default | Valid Range | Effect |
+| --- | --- | --- | --- | --- |
+| `enabled` | `bool` | `false` | `true/false` | Enables per-viewport border metadata in snapshots |
+| `width` | `f32` | `3.0` | `>= 0` | Border thickness in pixels |
+| `color` | `Color` | translucent gray | any color | Default border color for all viewports |
+| `per_slot_colors` | `Vec<Color>` | empty | up to 4 entries | Optional per-slot color override (falls back to `color` if no entry for a slot) |
+
+Border metadata is exposed on each `SplitScreenViewSnapshot` via `border_color` and `border_width`. The crate does not render borders itself; the consumer or an overlay system uses this metadata to draw visual decorations.
 
 ## `SplitScreenDebugConfig`
 

@@ -1,10 +1,12 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 use saddle_bevy_e2e::{
-    action::Action, actions::assertions, init_scenario, scenario::Scenario, E2EPlugin, E2ESet,
+    E2EPlugin, E2ESet, action::Action, actions::assertions, init_scenario, scenario::Scenario,
 };
-use split_screen::{LocalPlayerSlot, SplitScreenLayoutMode, SplitScreenRuntime, SplitScreenSystems};
+use split_screen::{
+    LocalPlayerSlot, SplitScreenLayoutMode, SplitScreenRuntime, SplitScreenSystems,
+};
 
-use crate::{apply_presentation, LabEntities, LabPresentation, LabPresentationState};
+use crate::{LabEntities, LabPresentation, LabPresentationState, apply_presentation};
 
 pub struct SplitScreenLabE2EPlugin;
 
@@ -60,6 +62,7 @@ fn list_scenarios() -> Vec<&'static str> {
         "split_screen_resize",
         "split_screen_four_player",
         "split_screen_per_player_ui",
+        "split_screen_dynamic_join",
     ]
 }
 
@@ -72,6 +75,7 @@ fn scenario_by_name(name: &str) -> Option<Scenario> {
         "split_screen_resize" => Some(build_resize()),
         "split_screen_four_player" => Some(build_four_player()),
         "split_screen_per_player_ui" => Some(build_per_player_ui()),
+        "split_screen_dynamic_join" => Some(build_dynamic_join()),
         _ => None,
     }
 }
@@ -306,6 +310,45 @@ fn build_per_player_ui() -> Scenario {
         }))
         .then(assertions::log_summary("split_screen_per_player_ui summary"))
         .then(Action::Screenshot("split_screen_per_player_ui".into()))
+        .then(Action::WaitFrames(1))
+        .build()
+}
+
+fn build_dynamic_join() -> Scenario {
+    Scenario::builder("split_screen_dynamic_join")
+        .description(
+            "Start with two players, transition to three, assert the layout rebalances with three active views, then remove one and verify layout recovers.",
+        )
+        .then(Action::Custom(Box::new(|world| {
+            set_lab_presentation(world, LabPresentation::SlantedSplit);
+        })))
+        .then(Action::WaitFrames(15))
+        .then(assertions::custom("starts with two active views", |world| {
+            let snapshot = snapshot(world);
+            snapshot.views.iter().filter(|view| view.active).count() == 2
+        }))
+        .then(Action::Screenshot("dynamic_join_two_player".into()))
+        .then(Action::WaitFrames(1))
+        .then(Action::Custom(Box::new(|world| {
+            set_lab_presentation(world, LabPresentation::DynamicJoin);
+        })))
+        .then(Action::WaitFrames(15))
+        .then(assertions::custom("three views become active after join", |world| {
+            let snapshot = snapshot(world);
+            snapshot.views.iter().filter(|view| view.active).count() == 3
+        }))
+        .then(Action::Screenshot("dynamic_join_three_player".into()))
+        .then(Action::WaitFrames(1))
+        .then(Action::Custom(Box::new(|world| {
+            set_lab_presentation(world, LabPresentation::SlantedSplit);
+        })))
+        .then(Action::WaitFrames(15))
+        .then(assertions::custom("back to two active views after leave", |world| {
+            let snapshot = snapshot(world);
+            snapshot.views.iter().filter(|view| view.active).count() == 2
+        }))
+        .then(assertions::log_summary("split_screen_dynamic_join summary"))
+        .then(Action::Screenshot("dynamic_join_back_to_two".into()))
         .then(Action::WaitFrames(1))
         .build()
 }

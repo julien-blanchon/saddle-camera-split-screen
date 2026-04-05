@@ -9,6 +9,94 @@ pub enum SplitScreenMode {
     DynamicOnly,
 }
 
+#[derive(Reflect, Debug, Clone, Copy, PartialEq, Default)]
+pub enum SplitScreenTransitionEasing {
+    Linear,
+    #[default]
+    SmoothStep,
+    EaseOutCubic,
+}
+
+#[derive(Reflect, Debug, Clone, Copy, PartialEq)]
+pub struct SplitScreenTransitionConfig {
+    pub enabled: bool,
+    pub duration_seconds: f32,
+    pub easing: SplitScreenTransitionEasing,
+}
+
+impl Default for SplitScreenTransitionConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            duration_seconds: 0.35,
+            easing: SplitScreenTransitionEasing::SmoothStep,
+        }
+    }
+}
+
+#[derive(Reflect, Debug, Clone, Copy, PartialEq, Default)]
+pub enum SplitScreenLetterboxPolicy {
+    #[default]
+    None,
+    Maintain16x9,
+    Maintain4x3,
+    Custom(f32),
+}
+
+impl SplitScreenLetterboxPolicy {
+    pub fn target_aspect_ratio(self) -> Option<f32> {
+        match self {
+            Self::None => None,
+            Self::Maintain16x9 => Some(16.0 / 9.0),
+            Self::Maintain4x3 => Some(4.0 / 3.0),
+            Self::Custom(ratio) => Some(ratio),
+        }
+    }
+}
+
+#[derive(Reflect, Debug, Clone, PartialEq)]
+pub struct SplitScreenLetterboxConfig {
+    pub policy: SplitScreenLetterboxPolicy,
+    pub fill_color: Color,
+}
+
+impl Default for SplitScreenLetterboxConfig {
+    fn default() -> Self {
+        Self {
+            policy: SplitScreenLetterboxPolicy::None,
+            fill_color: Color::BLACK,
+        }
+    }
+}
+
+#[derive(Reflect, Debug, Clone, PartialEq)]
+pub struct SplitScreenBorderConfig {
+    pub enabled: bool,
+    pub width: f32,
+    pub color: Color,
+    pub per_slot_colors: Vec<Color>,
+}
+
+impl Default for SplitScreenBorderConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            width: 3.0,
+            color: Color::srgba(0.3, 0.3, 0.3, 0.8),
+            per_slot_colors: Vec::new(),
+        }
+    }
+}
+
+impl SplitScreenBorderConfig {
+    pub fn color_for_slot(&self, slot_index: usize) -> Color {
+        self.per_slot_colors
+            .get(slot_index)
+            .copied()
+            .unwrap_or(self.color)
+    }
+}
+
 #[derive(Reflect, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SplitScreenProjectionPlane {
     #[default]
@@ -190,6 +278,9 @@ pub struct SplitScreenConfig {
     pub safe_area_padding: SplitScreenPadding,
     pub minimum_viewport_size: UVec2,
     pub resize_debounce_frames: u8,
+    pub transition: SplitScreenTransitionConfig,
+    pub letterbox: SplitScreenLetterboxConfig,
+    pub border: SplitScreenBorderConfig,
     pub debug: SplitScreenDebugConfig,
 }
 
@@ -209,6 +300,9 @@ impl Default for SplitScreenConfig {
             safe_area_padding: SplitScreenPadding::default(),
             minimum_viewport_size: UVec2::new(220, 140),
             resize_debounce_frames: 2,
+            transition: SplitScreenTransitionConfig::default(),
+            letterbox: SplitScreenLetterboxConfig::default(),
+            border: SplitScreenBorderConfig::default(),
             debug: SplitScreenDebugConfig::default(),
         }
     }
