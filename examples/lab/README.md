@@ -51,6 +51,7 @@ Useful resources and components to inspect:
 
 ```bash
 cargo run -p split_screen_lab --features e2e -- split_screen_smoke
+cargo run -p split_screen_lab --features e2e -- split_screen_mode_overrides
 cargo run -p split_screen_lab --features e2e -- split_screen_two_player_merge
 cargo run -p split_screen_lab --features e2e -- split_screen_two_player_slanted_split
 cargo run -p split_screen_lab --features e2e -- split_screen_weighted_dynamic

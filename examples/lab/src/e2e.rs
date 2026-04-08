@@ -1,9 +1,14 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 use saddle_bevy_e2e::{
-    E2EPlugin, E2ESet, action::Action, actions::assertions, init_scenario, scenario::Scenario,
+    E2EPlugin, E2ESet,
+    action::Action,
+    actions::{assertions, inspect},
+    init_scenario,
+    scenario::Scenario,
 };
 use split_screen::{
-    LocalPlayerSlot, SplitScreenLayoutMode, SplitScreenRuntime, SplitScreenSystems,
+    LocalPlayerSlot, SplitScreenCamera, SplitScreenConfig, SplitScreenLayoutMode, SplitScreenMode,
+    SplitScreenRuntime, SplitScreenSystems, SplitScreenUiRoot,
 };
 
 use crate::{LabEntities, LabPresentation, LabPresentationState, apply_presentation};
@@ -56,6 +61,7 @@ fn parse_e2e_args(args: &[String]) -> (Option<String>, bool) {
 fn list_scenarios() -> Vec<&'static str> {
     vec![
         "split_screen_smoke",
+        "split_screen_mode_overrides",
         "split_screen_two_player_merge",
         "split_screen_two_player_slanted_split",
         "split_screen_weighted_dynamic",
@@ -69,6 +75,7 @@ fn list_scenarios() -> Vec<&'static str> {
 fn scenario_by_name(name: &str) -> Option<Scenario> {
     match name {
         "split_screen_smoke" => Some(build_smoke()),
+        "split_screen_mode_overrides" => Some(build_mode_overrides()),
         "split_screen_two_player_merge" => Some(build_two_player_merge()),
         "split_screen_two_player_slanted_split" => Some(build_slanted_split()),
         "split_screen_weighted_dynamic" => Some(build_weighted_dynamic()),
@@ -113,14 +120,70 @@ fn build_smoke() -> Scenario {
             "Boot the split-screen lab in its merged state, assert that a runtime snapshot exists, and capture a readable baseline frame.",
         )
         .then(Action::WaitFrames(30))
+        .then(assertions::entity_count::<SplitScreenCamera>(
+            "managed cameras exist",
+            4,
+        ))
+        .then(assertions::entity_count::<SplitScreenUiRoot>(
+            "hud roots exist",
+            4,
+        ))
         .then(assertions::custom("runtime snapshot exists", |world| {
             !world.resource::<SplitScreenRuntime>().snapshots.is_empty()
         }))
         .then(assertions::custom("lab starts in merge presentation", |world| {
             world.resource::<LabPresentationState>().presentation == LabPresentation::Merge
         }))
+        .then(inspect::log_world_summary("split_screen_smoke world"))
         .then(assertions::log_summary("split_screen_smoke summary"))
         .then(Action::Screenshot("split_screen_smoke".into()))
+        .then(Action::WaitFrames(1))
+        .build()
+}
+
+fn build_mode_overrides() -> Scenario {
+    Scenario::builder("split_screen_mode_overrides")
+        .description(
+            "Drive the lab hotkeys that override SplitScreenMode, verify each mode change is reflected in the config resource, and capture readable checkpoints.",
+        )
+        .then(Action::WaitFrames(30))
+        .then(Action::Screenshot("split_screen_mode_overrides_before".into()))
+        .then(Action::WaitFrames(1))
+        .then(Action::PressKey(KeyCode::KeyA))
+        .then(Action::WaitFrames(2))
+        .then(Action::ReleaseKey(KeyCode::KeyA))
+        .then(assertions::custom("A hotkey selects auto mode", |world| {
+            world.resource::<SplitScreenConfig>().mode == SplitScreenMode::Auto
+        }))
+        .then(Action::Screenshot("split_screen_mode_overrides_auto".into()))
+        .then(Action::WaitFrames(1))
+        .then(Action::PressKey(KeyCode::KeyD))
+        .then(Action::WaitFrames(2))
+        .then(Action::ReleaseKey(KeyCode::KeyD))
+        .then(assertions::custom("D hotkey selects dynamic-only mode", |world| {
+            world.resource::<SplitScreenConfig>().mode == SplitScreenMode::DynamicOnly
+        }))
+        .then(Action::Screenshot("split_screen_mode_overrides_dynamic".into()))
+        .then(Action::WaitFrames(1))
+        .then(Action::PressKey(KeyCode::KeyF))
+        .then(Action::WaitFrames(2))
+        .then(Action::ReleaseKey(KeyCode::KeyF))
+        .then(assertions::custom("F hotkey selects fixed-only mode", |world| {
+            world.resource::<SplitScreenConfig>().mode == SplitScreenMode::FixedOnly
+        }))
+        .then(Action::Screenshot("split_screen_mode_overrides_fixed".into()))
+        .then(Action::WaitFrames(1))
+        .then(Action::PressKey(KeyCode::KeyS))
+        .then(Action::WaitFrames(2))
+        .then(Action::ReleaseKey(KeyCode::KeyS))
+        .then(assertions::custom("S hotkey selects shared-only mode", |world| {
+            world.resource::<SplitScreenConfig>().mode == SplitScreenMode::SharedOnly
+        }))
+        .then(inspect::log_resource::<SplitScreenRuntime>(
+            "split_screen_mode_overrides_runtime",
+        ))
+        .then(assertions::log_summary("split_screen_mode_overrides summary"))
+        .then(Action::Screenshot("split_screen_mode_overrides_shared".into()))
         .then(Action::WaitFrames(1))
         .build()
 }
